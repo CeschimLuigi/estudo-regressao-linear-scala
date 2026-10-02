@@ -1,48 +1,44 @@
 // Descrição do projeto: Simulação simplificada de análise de dados (Regressão Linear)
 //> using scala "3.3.0"
 
-case class Dado(renda: Double, doacao: Double)
-val dataset = List(Dado(42.00, 9.00), Dado(48.00, 10.00), Dado(50.00, 8.00), Dado(59.00, 5.00), Dado(65.00, 6.00), Dado(72.00, 3.00))
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions.{avg, pow}
+
+object Main {
+  case class Dado(renda: Double, doacao: Double)
 
 
-@main def simularCienciaDados(): Unit = {
-  println("--- 📊 PROJETO DATA SCIENCE HIPER SIMPLES (SCALA 3) ---")
+  def main(args: Array[String]): Unit = {
 
-  val mse = dataset.map {dado =>
-    val previsaoY = previsao(dado.renda)
-    val erro = dado.doacao - previsaoY
-    Math.pow(erro,2)
+    val spark = SparkSession.builder
+      .appName("MeuPrimeiroSpark")
+      .master("local[*]") // usar todos os núcleos do processador
+      .getOrCreate()
 
+    import spark.implicits._
 
+    val dataset = List(
+      Dado(42.00, 9.00), Dado(48.00, 10.00),
+      Dado(50.00, 8.00), Dado(59.00, 5.00),
+      Dado(65.00, 6.00), Dado(72.00, 3.00))
 
+    val dfDoacoes = dataset.toDF()
 
+    println("--- 📊 Carregando dados no spark ---")
 
-  }.sum / dataset.length
-  val performance = Math.sqrt(mse)
+    dfDoacoes.show()
 
-  println("ERRO QUADRADO MÉDIO " + mse)
-  println("PONTO DE VARIAÇÃO DE ACORDO COM A PREVISÃO " + performance)
+    dfDoacoes.filter($"renda" > 50).show()
 
+    println("--- CRIANDO COLUNA COM RENDA AO QUADRADO ---")
+    val dfComQuadrado = dfDoacoes.withColumn("renda_quadrado", pow($"renda", 2))
+    dfComQuadrado.show()
 
+    dfDoacoes.agg(avg($"doacao")).show()
 
+    spark.stop()
+
+  }
 }
-
-def previsao(x:Double): Double = {
-  val n = dataset.length
-  val somaX = dataset.map(dado => dado.renda).sum
-  val somaY = dataset.map(dado => dado.doacao).sum
-  val somaXY = dataset.map(dado => dado.renda * dado.doacao).sum
-  val somaX2 = dataset.map(dado => Math.pow(dado.renda, 2)).sum
-
-  val a = ((n * somaXY) - (somaX * somaY)) / ((n * somaX2) - Math.pow(somaX, 2))
-
-  val b = (somaY - (a * somaX)) / n
-
-  (a * x) + b
-
-
-
-}
-
 
 
