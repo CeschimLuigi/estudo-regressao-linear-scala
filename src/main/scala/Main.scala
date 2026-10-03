@@ -2,7 +2,7 @@
 //> using scala "3.3.0"
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{avg, pow}
+import org.apache.spark.sql.functions.{avg, pow,sum}
 
 object Main {
   case class Dado(renda: Double, doacao: Double)
@@ -35,6 +35,49 @@ object Main {
     dfComQuadrado.show()
 
     dfDoacoes.agg(avg($"doacao")).show()
+
+
+    val n = dfDoacoes.count()
+
+    val agregacoes = dfDoacoes.agg(
+      sum($"renda").alias("somaX"),
+      sum($"doacao").alias("somaY"),
+      sum($"renda" * $"doacao").alias("somaXY"),
+      sum(pow($"renda",2)).alias("somaX2")
+    )
+
+    val resultado  = agregacoes.first()
+
+    val somaX = resultado.getAs[Double]("somaX")
+    val somaY = resultado.getAs[Double]("somaY")
+    val somaXY = resultado.getAs[Double]("somaXY")
+    val somaX2 = resultado.getAs[Double]("somaX2")
+
+    // 4. A partir daqui, a matemática é idêntica ao que você já fazia!
+    val a = ((n * somaXY) - (somaX * somaY)) / ((n * somaX2) - Math.pow(somaX, 2))
+    val b = (somaY - (a * somaX)) / n
+
+    println(f"Equação da Reta no Spark: y = ${a}%.3fx + ${b}%.2f")
+
+    val x = 25
+
+    println( (a*x) + b)
+
+    val dfComPrevisao = dfDoacoes.withColumn("previsao", ($"renda" * a) + b)
+
+    println("--- 📊 TABELA COM AS PREVISÕES DO MODELO ---")
+    dfComPrevisao.show()
+
+    val novosClientes = List(80.0, 25.0,120.0,45.0)
+
+    val dfNovosClientes = novosClientes.toDF("renda")
+
+    val dfComPredicoes = dfNovosClientes.withColumn(
+      "previsao_doacao_novos_c", ($"renda" * a) + b)
+
+    println("--- PREVISÃO DE COMPORTAMENTO GERADA ---")
+    dfComPredicoes.show()
+
 
     spark.stop()
 
