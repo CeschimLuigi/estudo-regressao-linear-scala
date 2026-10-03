@@ -2,7 +2,7 @@
 //> using scala "3.3.0"
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.{avg, pow,sum}
+import org.apache.spark.sql.functions.{avg, pow, sum, when}
 
 object Main {
   case class Dado(renda: Double, doacao: Double)
@@ -77,6 +77,15 @@ object Main {
 
     println("--- PREVISÃO DE COMPORTAMENTO GERADA ---")
     dfComPredicoes.show()
+
+
+    val dfFinal = dfComPredicoes.withColumn(
+      "doacao_realista",
+      when($"previsao_doacao_novos_c" < 0, 0.0).otherwise($"previsao_doacao_novos_c")
+    )
+
+    println("--- TABELA FINAL PRONTA PARA O NEGÓCIO ---")
+    dfFinal.show()
 
 
     spark.stop()
