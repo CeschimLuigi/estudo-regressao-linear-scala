@@ -41,22 +41,42 @@ object Main {
       .setLabelCol("doacao")
       .setPredictionCol("previsao_doacao")
 
-    val modeloTreinado = algoritmo.fit(dfTreinoPronto)
+    val modeloTreinado = algoritmo.fit(dfTreinoPronto) // modelo treinado
 
     println(f"Equação gerada pela IA: y = ${modeloTreinado.coefficients(0)}%.3fx + ${modeloTreinado.intercept}%.2f\n")
 
 
+    val novosClientes = List(80.0, 25.0, 120.0, 45.0)
+    val dfNovos = novosClientes.toDF("renda")
 
+    val dfNovosProntos = preparadorVector.transform(dfNovos)
 
+    val dfPredicoes = modeloTreinado.transform(dfNovosProntos)
+    dfPredicoes.select("renda", "previsao_doacao").show()
 
+    println("--- 5. APLICANDO REGRAS DE NEGÓCIO ---")
+    val dfFinal = dfPredicoes.withColumn(
+      "doacao_realista",
+      when($"previsao_doacao" < 0, 0.0).otherwise($"previsao_doacao")
+    )
 
-
-
-
-
-
+    dfFinal.select("renda", "previsao_doacao", "doacao_realista").show()
 
     spark.stop()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   }
 }
